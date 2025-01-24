@@ -9,22 +9,15 @@ function Manifest() {
   const [selectedManifests, setSelectedManifests] = useState([]);
   const [error, setError] = useState(null);
   const [showModal, setShowModal] = useState(false);
-
+  
   const navigate = useNavigate();
 
-
-  const handleCloseModal = (action) => {
-    console.log(`Conferência foi: ${action}`);
-    setShowModal(false);
-  };
 
   useEffect(() => {
     const fetchManifest = async () => {
       try {
 
         const data = await apiServices.getManifestActive();
-
-        console.log(data)
         setManifest(data);
         
 
@@ -38,29 +31,11 @@ function Manifest() {
   }, [])
 
 
-   // Bloqueio para impedir o fechamento da aba enquanto o modal estiver aberto
-    useEffect(() => {
-      const handleBeforeUnload = (e) => {
-        if (showModal) {
-          const message = "Você está em uma conferência. Se sair, ela será interrompida.";
-          e.returnValue = message; // Para navegadores modernos
-          return message; // Para navegadores mais antigos
-        }
-      };
-  
-      window.addEventListener("beforeunload", handleBeforeUnload);
-  
-      // Cleanup ao desmontar o componente
-      return () => {
-        window.removeEventListener("beforeunload", handleBeforeUnload);
-      };
-    }, [showModal]);
-  
-
 
 
   // Função para alternar seleção de um manifesto
   const toggleSelection = (id) => {
+    console.log(id)
     setSelectedManifests((prevSelected) =>
       prevSelected.includes(id)
         ? prevSelected.filter((manifestId) => manifestId !== id) // Deseleciona
@@ -68,11 +43,11 @@ function Manifest() {
     );
   };
 
-  // Verifica se um manifesto está selecionado
-  const isSelected = (id) => selectedManifests.includes(id);
-
   const startConference = () => {
-    alert(`Conferência iniciada para os manifestos: ${selectedManifests.join(', ')}`);
+    
+  
+    console.log(selectedManifests)
+    navigate("/conference" , {state : {manifestId :selectedManifests}})
   };
 
   return (
@@ -130,7 +105,7 @@ function Manifest() {
       {selectedManifests.length > 0 && (
         <div className="mt-4">
           <button
-            onClick={() => navigate('/conference')}
+            onClick={startConference}
             className="btn btn-primary btn-lg"
           >
             Iniciar Conferência

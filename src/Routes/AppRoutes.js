@@ -1,8 +1,7 @@
 
 
-import React from "react";
+import React , {useState} from "react";
 import 'bootstrap/dist/css/bootstrap.min.css';
-
 
 
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom'
@@ -16,13 +15,16 @@ import Conference from "../Components/Conference/Conference";
 
 
 const AppRoutes = () => {
+
+    const [selectedManifests, setSelectedManifests] = useState([]);
+
     return (
         <Router>
             <Routes>
             <Route path="/" element={<Home/>}>
                 <Route index element={<HomeButtons />} />
-                <Route path="/manifest" element={<Manifest/>}/>
-                <Route path="/conference" element={<Conference/>}/>
+                <Route path="/manifest" element={<Manifest selectedManifests={selectedManifests}/>}/>
+                <Route path="/conference" element={<Conference selectedManifests={selectedManifests}/>}/>
                </Route>
 
             </Routes>
