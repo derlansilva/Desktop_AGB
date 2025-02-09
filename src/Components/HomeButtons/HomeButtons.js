@@ -2,6 +2,7 @@
 
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import "./homebtnstyle.css"
 
 const HomeButtons = () => {
 
@@ -9,9 +10,9 @@ const HomeButtons = () => {
     return (
         <div className="flex-grow-1 d-flex align-items-center justify-content-center">
             <div className="text-center">
-                <div className="d-flex flex-column align-items-center">
+                <div className="d-flex flex-column align-items-center start-btn">
                     <button className="btn btn-primary btn-lg mb-3" style={{ width: '350px' }}
-                        onClick={() => navigate('/manifest')}
+                        onClick={() => navigate('/home/manifest')}
                     >
                         1 - Conferir por caixa fechada
                     </button>

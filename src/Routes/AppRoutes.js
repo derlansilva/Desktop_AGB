@@ -1,6 +1,6 @@
 
 
-import React , {useState} from "react";
+import React, { useState } from "react";
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 
@@ -9,6 +9,7 @@ import Home from "../pages/Home/Home";
 import Manifest from "../pages/Manifest/Manifest";
 import HomeButtons from "../Components/HomeButtons/HomeButtons";
 import Conference from "../Components/Conference/Conference";
+import Login from "../pages/Login/Login";
 
 
 //const root = ReactDOM.createRoot(document.getElementById('root'));
@@ -21,11 +22,12 @@ const AppRoutes = () => {
     return (
         <Router>
             <Routes>
-            <Route path="/" element={<Home/>}>
-                <Route index element={<HomeButtons />} />
-                <Route path="/manifest" element={<Manifest selectedManifests={selectedManifests}/>}/>
-                <Route path="/conference" element={<Conference selectedManifests={selectedManifests}/>}/>
-               </Route>
+                <Route path="/" element={<Login/>}/>
+                <Route path="/home" element={<Home />}>
+                    <Route index element={<HomeButtons />} />
+                    <Route path="/home/manifest" element={<Manifest selectedManifests={selectedManifests} />} />
+                    <Route path="/home/conference" element={<Conference selectedManifests={selectedManifests} />} />
+                </Route>
 
             </Routes>
         </Router>

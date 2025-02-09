@@ -45,9 +45,7 @@ function Manifest() {
 
   const startConference = () => {
     
-  
-    console.log(selectedManifests)
-    navigate("/conference" , {state : {manifestId :selectedManifests}})
+    navigate("/home/conference" , {state : {manifestId :selectedManifests}})
   };
 
   return (
