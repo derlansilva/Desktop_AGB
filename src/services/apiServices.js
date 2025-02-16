@@ -17,6 +17,14 @@ const apiServices ={
         const response = await api.post('/manifest/create' , manifest);
 
         return response.data;
+    },
+
+    updateManifest: async ( itensManifest , id) => {
+        console.log(id)
+        
+        const response = await api.put(`/manifest/${id}` , itensManifest)
+
+        return response.data;
     }
 }
 

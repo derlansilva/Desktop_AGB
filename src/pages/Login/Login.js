@@ -40,7 +40,7 @@ const Login = () => {
 
                 <div className="card-body">
                     <h3 className="card-title text-center mb-4 text-primary">
-                        <img src="/logo.png"
+                        <img src="/assets/logo.png"
                             className="me-2"
                             style={{ width: '200px', height: '50px', objectFit: 'cover' }} />
                     </h3>

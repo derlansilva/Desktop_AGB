@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { data, useLocation, useNavigate } from "react-router-dom";
-import apiServices from "../../services/apiServives";
+import apiServices from "../../services/apiServices";
 
 import 'bootstrap/dist/css/bootstrap.min.css';
 
@@ -12,7 +12,8 @@ const Conference = () => {
   // Estado para controlar os inputs
   const [barCode, setBarCode] = useState(""); // Código de barras da caixa
   const [scannedItems, setScannedItems] = useState([]);
-  const [showModal , setShowModal] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [showModalInterroper, setShowModalInterroper] = useState(false);
 
   const [quantidade, setQuantidade] = useState(""); // Quantidade do produto
   const [showQuantidade, setShowQuantidade] = useState(false); // Controle de exibição do campo de quantidade
@@ -21,31 +22,37 @@ const Conference = () => {
 
   const navigate = useNavigate();
   const [products, setProducts] = useState([]);
-  const [manifests, setManifests] = useState([])
+  const [itemManifest, setItemsManifest] = useState([]);
 
-  const { manifestId }= location.state || {manifestId: []};
+  const [manifests, setManifests] = useState([])
+  const [manifestStart, setManifestStart] = useState([])
+
+  const { manifestId } = location.state || { manifestId: [] };
   const [quantity, setQuantity] = useState(0);
 
   const [total, setTotal] = useState();
   const [confered, setConferid] = useState(0)
   const [faltas, setFaltas] = useState(0)
 
-
   useEffect(() => {
     const fetchManifest = async () => {
-      
+
       try {
         //const idManifest = manifestId.join(","); // "1,2,3"
         const response = await Promise.all(
           manifestId.map(id => apiServices.getManifestById(id))
         )
-        
-        const allProducts = response.flatMap(manifest => manifest.itemManifest|| []);
 
-        const totalItems = response.reduce((sum , product) => sum + (product.quantity || 0), 0);
+        setManifestStart(response)
 
-        console.log(totalItems)
+        const allProducts = response.flatMap(manifest => manifest.itemManifest || []);
+
+        const totalItems = response.reduce((sum, product) =>
+          sum + (product.itemManifest?.reduce((subSum, item) => subSum + item.quantity, 0) || 0), 0);
+
+
         setProducts(allProducts)
+        setItemsManifest(allProducts);
         setTotal(totalItems)
         setFaltas(totalItems)
 
@@ -58,13 +65,20 @@ const Conference = () => {
     fetchManifest();
   }, [])
 
-  const playSound = (type)=>{
-      const audio = new Audio(type ==="success" ? "/assets/success.mp3": "/assets/error.mp3")
 
-      audio.play();
+  const sounds = {
+    success: new Audio("/assets/success.mp3"),
+    error: new Audio("/assets/error.mp3"),
+  };
+
+  const playSound = (type) => {
+    if (sounds[type]) {
+      sounds[type].currentTime = 0;
+      sounds[type].play();
+    }
   }
 
-  // Função para lidar com a leitura do código de barras da caixa
+  // Função para lidar com a leitura do código de b arras da caixa
   const handleBarCode = (e) => {
 
     const valor = e.target.value;
@@ -88,18 +102,35 @@ const Conference = () => {
     }
   };
 
+  const handleUpdateManifest = (value) => {
+
+    const manifestCopy = structuredClone(manifestStart);  
+
+    manifestCopy.flatMap((items) => {
+      items.itemManifest.map(product => {
+        if(product.code === barCode){
+          product.quantity -= value;
+          product.quantityConfered += value
+        }
+      })
+    })
+
+    setManifestStart(manifestCopy);
+
+  };
+
   // Função para lidar com o campo de quantidade
   const handleQuantityChange = (e) => {
 
     const valor = e.target.value;  // Quantidade informada
     const quantidadeInformada = parseInt(valor); // Converte para inteiro
-    //playerSound()
-
+    
+    handleUpdateManifest(quantidadeInformada)
+    
     // Verifica se a quantidade informada é válida
     if (quantidadeInformada > 0) {
       // Mapeia os produtos e atualiza a quantidade do produto correto
       const updatedProducts = products.map((item) => {
-        
         if (item.code === String(barCode)) {
 
           setConferid(confered + quantidadeInformada)
@@ -107,28 +138,30 @@ const Conference = () => {
 
           //atualiza a lista para envio ao back end
           setScannedItems((prev) => {
-            const itemExist = prev.find((scanner ) => scanner.code === barCode);
+            const itemExist = prev.find((scanner) => scanner.code === barCode);
             const now = new Date().toISOString()
-            if(itemExist){
-              return prev.map((scanner) => 
+            if (itemExist) {
+              return prev.map((scanner) =>
                 scanner.code === barCode
-                ? { ...scanner , quantity : scanner.quantity + quantidadeInformada ,  capture : now}
-                :scanner
-                
+                  ? { ...scanner, quantity: scanner.quantity + quantidadeInformada, capture: now }
+                  : scanner
+
               );
-            }else{
-              
-              return [...prev , {code : barCode , description:item.description, quantity:quantidadeInformada , capture :now}]
+            } else {
+
+              return [...prev, { code: barCode, description: item.description, quantity: quantidadeInformada, capture: now }]
             }
-    
+
           })
           // Verifica se a quantidade informada é menor ou igual à quantidade disponível
           if (item.quantity >= quantidadeInformada) {
             setBarCode("")
             playSound("success")
+           
             return {
               ...item,
-              quantity: item.quantity - quantidadeInformada // Subtrai a quantidade informada
+              quantity: item.quantity - quantidadeInformada ,// Subtrai a quantidade informada
+              quantityConfered:item.quantityConfered + quantidadeInformada
             };
           } else {
             playSound("error")
@@ -137,10 +170,11 @@ const Conference = () => {
             return;
           }
         }
+        
         return item; // Retorna o item não alterado
       });
 
-      const filterProducts  = updatedProducts.filter(item => item.quantity > 0);
+      const filterProducts = updatedProducts.filter(item => item.quantity > 0);
       setProducts(filterProducts); // Atualiza o estado com o novo array de produtos
       setQuantidade(""); // Limpa o campo de entrada
       setShowQuantidade(false); // Esconde o campo de quantidade
@@ -158,11 +192,39 @@ const Conference = () => {
     audio.play()
   }
 
-  const handleFinnishConference = async  () => {
+  const handleInterromper = async () => {
+    try {
+      await Promise.all(
+        manifestStart.map(async (manifest) => {
+          const payload =  manifest;
+          console.log("Dados enviados:", JSON.stringify(payload, null, 2));
+  
+          console.log("Enviando manifesto para o backend:", payload);
+  
+          const response = await apiServices.updateManifest(
+            payload, 
+            manifest.id,
+            { headers: { "Content-Type": "application/json" } }
+          );
+  
+          console.log("Resposta do backend:", response);
+          
+          return response;
+        })
+      );
+  
+      console.log("Todos os manifestos foram atualizados com sucesso!");
+    } catch (error) {
+      console.error("Erro ao atualizar manifestos:", error);
+    }
+  };
+  
+
+  const handleFinnishConference = async () => {
     try {
       console.log(scannedItems)
     } catch (error) {
-      
+
     }
   }
   // Função para resetar o fluxo após preenchimento da quantidade
@@ -184,8 +246,6 @@ const Conference = () => {
 
   // Estado para controlar os botões
   const [buttonState, setButtonState] = useState({
-    interromper: false,
-    finalizar: false,
     imprimir: false,
   });
 
@@ -196,7 +256,6 @@ const Conference = () => {
       [button]: !prevState[button],
     }));
   };
-
 
   return (
 
@@ -281,57 +340,95 @@ const Conference = () => {
               </tr>
             </thead>
             <tbody>
-              {products.map((item) => (
-                <tr key={item.code}>
-                  <td>{item.product.code}</td>
-                  <td>{item.product.description}</td>
-                  <td>{item.quantity}</td>
-                </tr>
-              ))}
+              {products.filter((item) => item.quantity > 0)
+                .map((item) => (
+                  <tr key={item.code}>
+                    <td>{item.code}</td>
+                    <td>{item.description}</td>
+                    <td>{item.quantity}</td>
+                  </tr>
+                ))}
             </tbody>
           </table>
         </div>
       </div>
 
-       
+
       {/* Modal de Confirmação */}
       {showModal && (
+
         <div className="modal-overlay" style={modalOverlayStyle}>
           <div className="modal fade show d-block" tabIndex="-1">
-          <div className="modal-dialog modal-dialog-centered">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">Confirmar Finalização</h5>
-                <button
-                  type="button"
-                  className="btn-close"
-                  onClick={() => setShowModal(false)}
-                ></button>
-              </div>
-              <div className="modal-body">
-                Tem certeza de que deseja finalizar a conferência?
-              </div>
-              <div className="modal-footer">
-                <button className="btn btn-secondary" onClick={() => setShowModal(false)}>
-                  Cancelar
-                </button>
-                <button className="btn btn-danger" onClick={handleFinnishConference}>
-                  Finalizar
-                </button>
+            <div className="modal-dialog modal-dialog-centered">
+              <div className="modal-content">
+                <div className="modal-header">
+                  <h5 className="modal-title">Confirmação </h5>
+                  <button
+                    type="button"
+                    className="btn-close"
+                    onClick={() => setShowModal(false)}
+                  ></button>
+                </div>
+                <div className="modal-body">
+                  DESEJA FINALIZAR A CONFERENCIA?
+                </div>
+                <div className="modal-footer">
+                  <button className="btn btn-secondary" onClick={() => setShowModal(false)}>
+                    Cancelar
+                  </button>
+                  <button className="btn btn-danger" onClick={handleFinnishConference()}>
+                    Finalizar
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         </div>
-        </div>
       )}
 
+
+
+      {/* Modal de Confirmação */}
+      {showModalInterroper && (
+
+        <div className="modal-overlay" style={modalOverlayStyle}>
+          <div className="modal fade show d-block" tabIndex="-1">
+            <div className="modal-dialog modal-dialog-centered">
+              <div className="modal-content">
+                <div className="modal-header">
+                  <h5 className="modal-title">Confirmação </h5>
+                  <button
+                    type="button"
+                    className="btn-close"
+                    onClick={() => setShowModalInterroper(false)}
+                  ></button>
+                </div>
+                <div className="modal-body">
+                  DESEJA MESMO INTERROPER A CONFERENCIA ?
+                </div>
+                <div className="modal-footer">
+                  <button className="btn btn-secondary" onClick={() => setShowModalInterroper(false)}>
+                    CANCELAR
+                  </button>
+                  <button className="btn btn-danger" onClick={() => {
+                    handleInterromper();
+                    setShowModalInterroper(false);
+                  }}>
+                    CONFIRMAR
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Div 5: Botões Abaixo da Tabela */}
       <div className="row bottons">
         <div className="col-md-3">
           <button
             className="btn w-100 btn-primary"
-            onClick={() => navigate("/manifest")}
+            onClick={() => setShowModalInterroper(true)}
           >
             Interromper
           </button>
@@ -356,7 +453,7 @@ const Conference = () => {
           <button className="btn w-100 btn-secondary">Liberar Sistema</button>
         </div>
       </div>
-       
+
     </div>
   )
 }
